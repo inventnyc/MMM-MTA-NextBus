@@ -31,3 +31,4 @@ var config = {
 | `timeFormat`     | *Optional* Use 12 or 24 hour format. <br><br> **Possible values:** `12` or `24` <br> **Default value:** uses value of _config.timeFormat_
 | `maxEntries`     | *Optional* The maximum number of buses to display. <br><br> **Possible values:** `1` to `10` <br> **Default value:** `5`
 | `updateInterval` | *Optional* How often to check for the next bus. <br><br> **Type:** `int`<br> **Default value:** `60000` milliseconds (1 minute)
+| `retryDelay`     | *Optional* How long to wait before retrying after a failed API call. <br><br> **Type:** `int`<br> **Default value:** `5000` milliseconds (5 seconds)

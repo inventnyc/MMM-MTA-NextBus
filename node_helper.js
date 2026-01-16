@@ -1,97 +1,68 @@
 /* Magic Mirror
  * Node Helper: MMM-MTA-NextBus
  *
- * By 
+ * By tie624
  * MIT Licensed.
  */
 
-var NodeHelper = require("node_helper");
-var http = require('http');
+const NodeHelper = require("node_helper");
 
 module.exports = NodeHelper.create({
-
-	// Override socketNotificationReceived method.
-
-	/* socketNotificationReceived(notification, payload)
-	 * This method is called when a socket notification arrives.
-	 *
-	 * argument notification string - The identifier of the noitication.
-	 * argument payload mixed - The payload of the notification.
+	/**
+	 * Called when a socket notification arrives.
+	 * @param {string} notification - The identifier of the notification.
+	 * @param {object} payload - The payload of the notification.
 	 */
-	socketNotificationReceived: function(notification, payload) {
-		var self = this;
-		
+	socketNotificationReceived(notification, payload) {
 		if (notification === "CONFIG") {
-			self.config = payload;
-			self.getData();
+			this.config = payload;
+			this.getData();
 
-			setInterval(function() {
-				self.getData();
-			}, self.config.updateInterval);
+			setInterval(() => {
+				this.getData();
+			}, this.config.updateInterval);
 		} else if (notification === "GET_DATA") {
-			self.getData();
+			this.getData();
 		}
 	},
 
-	
-
-	/* scheduleUpdate()
-	 * Schedule next update.
-	 *
-	 * argument delay number - Milliseconds before next update.
-	 *  If empty, this.config.updateInterval is used.
+	/**
+	 * Fetches bus arrival data from the MTA Bus Time API.
 	 */
-	/*scheduleUpdate: function(delay) {
-		var nextLoad = this.config.updateInterval;
-		if (typeof delay !== "undefined" && delay >= 0) {
-			nextLoad = delay;
+	async getData() {
+		const url = `https://bustime.mta.info/api/siri/stop-monitoring.json?key=${this.config.apiKey}&version=2&OperatorRef=MTA&MonitoringRef=${this.config.busStopCode}`;
+
+		try {
+			const response = await fetch(url);
+
+			if (response.status === 401) {
+				console.error(this.name, "Unauthorized - check your API key");
+				this.sendSocketNotification("ERROR", "Unauthorized");
+				return;
+			}
+
+			if (!response.ok) {
+				console.error(this.name, `Could not load data: ${response.status}`);
+				this.scheduleRetry();
+				return;
+			}
+
+			const data = await response.json();
+			this.sendSocketNotification("DATA", data);
+		} catch (error) {
+			console.error(this.name, "Communications error:", error.message);
+			this.scheduleRetry();
 		}
-		nextLoad = nextLoad ;
-		var self = this;
-		setTimeout(function() {
-			self.getData();
-		}, nextLoad);
-	},*/
+	},
 
-	/*
-	 * getData
-	 * function example return data and show it in the module wrapper
-	 * get a URL request
-	 *
+	/**
+	 * Schedules a retry after a failed API call.
 	 */
-	getData: function() {
-		var self = this;
-
-		var urlApi = "http://bustime.mta.info/api/siri/stop-monitoring.json?key=" + 
-			self.config.apiKey + "&version=2&OperatorRef=MTA&MonitoringRef=" + 
-			self.config.busStopCode;
-		
-		//var retry = true;
-
-		http.get(urlApi, function(res) {
-			var responseString = "";
-
-			if (res.statusCode === 401) {
-				self.sendSocketNotification("ERROR", this.status);
-				console.log(self.name, this.status);
-				//retry = false;
-			} else if (res.statusCode != 200) {
-				console.log(self.name, "Could not load data.");
-				//self.scheduleUpdate((self.loaded) ? -1 : self.config.retryDelay);
-			} 
-
-			res.on('data', function(data) {
-				responseString += data;
-			});
-			
-			res.on('end', function() {
-				self.sendSocketNotification("DATA", JSON.parse(responseString));
-			});
-
-		}).on('error', function(e) {
-			console.log("Communications error:", e.message);
-			//self.scheduleUpdate((self.loaded) ? -1 : self.config.retryDelay);
-		});
+	scheduleRetry() {
+		console.log(this.name, `Retrying in ${this.config.retryDelay}ms...`);
+		setTimeout(() => {
+			this.getData();
+		}, this.config.retryDelay);
 	}
 
 });

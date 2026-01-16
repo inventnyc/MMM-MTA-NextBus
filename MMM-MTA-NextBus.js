@@ -1,9 +1,8 @@
-/* global Module */
 
 /* Magic Mirror
  * Module: MMM-MTA-NextBus
  *
- * By 
+ * By tie624
  * MIT Licensed.
  */
 
@@ -15,146 +14,99 @@ Module.register("MMM-MTA-NextBus", {
 		retryDelay: 5000
 	},
 
-	requiresVersion: "2.1.0", // Required version of MagicMirror
+	requiresVersion: "2.1.0",
 
-	start: function() {
-		var self = this;
-		var dataRequest = null;
-		var dataNotification = null;
-
-		//Flag for check if module is loaded
-		//this.loaded = false;
-		console.log(this.config.timeFormat);
+	start() {
+		this.dataRequest = null;
 		this.sendSocketNotification("CONFIG", this.config);
 
-		// Schedule update timer.
-		setInterval(function() {
-			self.sendSocketNotification("GET_DATA");
+		// Schedule update timer
+		setInterval(() => {
+			this.sendSocketNotification("GET_DATA");
 		}, this.config.updateInterval);
-		
-	},	
+	},
 
-	getDom: function() {
-		var self = this;
+	getDom() {
+		const wrapper = document.createElement("div");
 
-		// create element wrapper for show into the module
-		var wrapper = document.createElement("div");
-		// If this.dataRequest is not empty
 		if (this.dataRequest) {
-			this.dataRequest.forEach(function(data, i) {
-				var wrapperDataRequest = document.createElement("div");
-				
-				wrapperDataRequest.innerHTML = data;
-				wrapperDataRequest.className = "small";
-	
-				wrapper.appendChild(wrapperDataRequest);
+			this.dataRequest.forEach((data) => {
+				const row = document.createElement("div");
+				row.innerHTML = data;
+				row.className = "small";
+				wrapper.appendChild(row);
 			});
-
-			
 		}
-		
+
 		return wrapper;
 	},
 
-	getScripts: function() {
+	getScripts() {
 		return ["moment.js"];
 	},
 
-	getStyles: function () {
-		return [
-			"MMM-MTA-NextBus.css",
-		];
+	getStyles() {
+		return ["MMM-MTA-NextBus.css"];
 	},
 
-	processData: function(data) {
-		var self = this;
-		this.dataRequest = self.processActionNextBus(data);
-		self.updateDom(self.config.animationSpeed);
-		//if (this.loaded === false) {  ; }
-		//this.loaded = true;
-
-		// the data if load
-		// send notification to helper
-		//this.sendSocketNotification("MMM-MTA-NextBus-NOTIFICATION_TEST", data);
+	processData(data) {
+		this.dataRequest = this.processActionNextBus(data);
+		this.updateDom(this.config.animationSpeed);
 	},
 
-	processActionNextBus: function(response) {
-		
-		var result = [];
-		
-		var serviceDelivery = response.Siri.ServiceDelivery;
-		var updateTimestampReference = new Date(serviceDelivery.ResponseTimestamp);
-		
-		//console.log(updateTimestampReference);
-		
-		// array of buses
-		var visits = serviceDelivery.StopMonitoringDelivery[0].MonitoredStopVisit;
-		var visitsCount = Math.min(visits.length, this.config.maxEntries);
-		
-		for (var i = 0; i < visitsCount; i++) {
-			r = '';
+	processActionNextBus(response) {
+		const result = [];
+		const serviceDelivery = response.Siri.ServiceDelivery;
+		const updateTimestamp = new Date(serviceDelivery.ResponseTimestamp);
+		const visits = serviceDelivery.StopMonitoringDelivery[0].MonitoredStopVisit;
+		const visitsCount = Math.min(visits.length, this.config.maxEntries);
 
-			var journey = visits[i].MonitoredVehicleJourney;
-			var line = journey.PublishedLineName[0]; 
-			
-			var destinationName = journey.DestinationName[0];
-			if (destinationName.startsWith('LIMITED')) {
-				line += ' LIMITED';
+		for (let i = 0; i < visitsCount; i++) {
+			const journey = visits[i].MonitoredVehicleJourney;
+			let line = journey.PublishedLineName[0];
+			const destinationName = journey.DestinationName[0];
+
+			if (destinationName.startsWith("LIMITED")) {
+				line += " LIMITED";
 			}
-			
-			r += line + ', ';
-			
-			var monitoredCall = journey.MonitoredCall;
-			// var expectedArrivalTime = new Date(monitoredCall.ExpectedArrivalTime);
+
+			const monitoredCall = journey.MonitoredCall;
+			let entry = `${line}, `;
+
 			if (monitoredCall.ExpectedArrivalTime) {
-				var mins = this.getArrivalEstimateForDateString(monitoredCall.ExpectedArrivalTime, updateTimestampReference);
-				r += mins + ', ';
+				const mins = this.getArrivalEstimate(monitoredCall.ExpectedArrivalTime, updateTimestamp);
+				entry += `${mins}, `;
 			}
-			
-			
-			var distance = monitoredCall.ArrivalProximityText;
-			r += distance;
 
-			result.push(r);
+			entry += monitoredCall.ArrivalProximityText;
+			result.push(entry);
 		}
 
+		result.push(`Last Updated: ${this.formatTimeString(updateTimestamp)}`);
 
-
-		result.push('Last Updated: ' + this.formatTimeString(updateTimestampReference));
-		
 		return result;
 	},
 
-	getArrivalEstimateForDateString: function(dateString, refDate) {
-		var d = new Date(dateString);
-		
-		var mins = Math.floor((d - refDate) / 60 / 1000);
-		
-		return mins + ' minute' + ((Math.abs(mins) === 1) ? '' : 's');
+	getArrivalEstimate(dateString, refDate) {
+		const arrivalDate = new Date(dateString);
+		const mins = Math.floor((arrivalDate - refDate) / 60000);
+
+		return `${mins} minute${Math.abs(mins) === 1 ? "" : "s"}`;
 	},
 
-	formatTimeString: function(date) {
-		var m = moment(date);
-
-		var hourSymbol = "HH";
-		var periodSymbol = "";
-
-		if (this.config.timeFormat !== 24) {
-			hourSymbol = "h";
-			periodSymbol = " A";
-		}
-
-		var format = hourSymbol + ":mm" + periodSymbol;
+	formatTimeString(date) {
+		const m = moment(date);
+		const is24Hour = this.config.timeFormat === 24;
+		const format = is24Hour ? "HH:mm" : "h:mm A";
 
 		return m.format(format);
 	},
 
-	// socketNotificationReceived from helper
-	socketNotificationReceived: function (notification, payload) {
+	socketNotificationReceived(notification, payload) {
 		if (notification === "DATA") {
 			this.processData(payload);
 		} else if (notification === "ERROR") {
-			self.updateDom(self.config.animationSpeed);
-		} 
-	},
+			this.updateDom(this.config.animationSpeed);
+		}
+	}
 });

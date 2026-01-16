@@ -1,18 +1,37 @@
 {
   "name": "MMM-MTA-NextBus",
   "version": "1.0.0",
-  "description": "Todo: Insert description here!",
+  "description": "A MagicMirror² module that displays NYC MTA bus arrival times for your bus stop",
   "main": "MMM-MTA-NextBus.js",
-  "author": "",
+  "scripts": {
+    "lint": "eslint *.js",
+    "test": "eslint *.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/tie624/MMM-MTA-NextBus.git"
+  },
+  "keywords": [
+    "MagicMirror",
+    "MagicMirror2",
+    "MTA",
+    "NYC",
+    "bus",
+    "transit",
+    "smart-mirror"
+  ],
+  "author": "tie624",
   "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/tie624/MMM-MTA-NextBus/issues"
+  },
+  "homepage": "https://github.com/tie624/MMM-MTA-NextBus#readme",
   "devDependencies": {
-    "grunt": "latest",
-    "grunt-eslint": "latest",
-    "grunt-jsonlint": "latest",
-    "grunt-markdownlint": "^1.0.13",
-    "grunt-stylelint": "latest",
-    "grunt-yamllint": "latest",
-    "stylelint-config-standard": "latest",
-    "time-grunt": "latest"
+    "@eslint/js": "^9.18.0",
+    "eslint": "^9.18.0",
+    "globals": "^15.14.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
   }
 }
