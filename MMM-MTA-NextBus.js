@@ -79,7 +79,7 @@ Module.register("MMM-MTA-NextBus", {
 			}
 
 			entry += monitoredCall.ArrivalProximityText;
-			result.push(entry);
+			result.push(i===0 ? `<span class='bright bold'>${entry}</span>` : entry);
 		}
 
 		result.push(`Last Updated: ${this.formatTimeString(updateTimestamp)}`);
